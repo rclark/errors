@@ -1,0 +1,38 @@
+#!/bin/sh
+
+PASS=true
+
+if ! make doc
+  then PASS = false
+fi
+
+git add readme.md
+
+STAGED_GO_FILES=$(git diff --cached --name-only --diff-filter ACMR | grep ".go$" | grep -v '^vendor/')
+
+if [ "$STAGED_GO_FILES" = "" ]
+  then exit 0
+fi
+
+directories=""
+for filename in $STAGED_GO_FILES
+  do directories="$directories $(dirname $filename)"
+done
+
+STAGED_GO_PACKAGES=$(echo "$directories" | tr " " "\n" | sort | uniq)
+
+if ! gofmt -s -w $STAGED_GO_FILES
+  then PASS=false
+fi
+
+if ! golangci-lint run --fix $STAGED_GO_PACKAGES
+  then PASS=false
+fi
+
+if ! git add $STAGED_GO_FILES
+  then PASS=false
+fi
+
+if [ "$PASS" = "false" ]
+  then exit 1
+fi

@@ -1,0 +1,19 @@
+---
+linters:
+  enable:
+    - revive
+
+run:
+  build-tags:
+    - wireinject
+
+issues:
+  exclude:
+    - unexported-return
+    - unused-parameter
+    - redefines-builtin-id
+  include:
+    - EXC0002
+    - EXC0012
+    - EXC0013
+    - EXC0014
