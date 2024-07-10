@@ -27,7 +27,7 @@ func main() {
   // Output:
   // something went wrong
   // example.main
-  //  /path/to/main.go:10
+  //  /path/to/example.go:10
 }
 ```
 
