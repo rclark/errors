@@ -6,7 +6,7 @@ if ! make doc
   then PASS = false
 fi
 
-git add readme.md
+git add usage.md
 
 STAGED_GO_FILES=$(git diff --cached --name-only --diff-filter ACMR | grep ".go$" | grep -v '^vendor/')
 

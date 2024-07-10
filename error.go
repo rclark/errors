@@ -1,3 +1,4 @@
+// Package errors is yet another package for errors with stack traces included.
 package errors
 
 import (

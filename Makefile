@@ -14,10 +14,7 @@ init:
 
 doc:
 	@gomarkdoc \
-		--output readme.md  \
-		--template-file file=templates/file.md \
-		--template-file package=templates/package.md \
-		.
+		--output usage.md .
 
 test:
 	gotestsum --format testname -- -coverprofile=coverage.out ./...
