@@ -1,6 +1,7 @@
 package errors
 
 import (
+	"fmt"
 	"runtime"
 )
 
@@ -44,4 +45,22 @@ func (e Error) StackTrace() Stack {
 // Unwrap returns the wrapped error, if any.
 func (e Error) Unwrap() error {
 	return e.err
+}
+
+// Format formats the error according to the fmt.Formatter interface.
+//
+//   - %s    <message>
+//   - %+s   <message>: [<filename:line> ...]
+//   - %v    <message>
+//   - %+v   <message>\n<package>.<function>\n\t<filepath>:<line>\n\t...
+func (e Error) Format(s fmt.State, verb rune) {
+	_, _ = s.Write([]byte(e.Error()))
+
+	if s.Flag('+') {
+		if verb == 's' {
+			_, _ = s.Write([]byte(": "))
+		}
+
+		Stack(e.stack).Format(s, verb)
+	}
 }
