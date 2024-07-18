@@ -178,6 +178,25 @@ func TestErrorf(t *testing.T) {
 	})
 }
 
+func TestAsAny(t *testing.T) {
+	err := errors.New("base")
+	err = errors.NewError[errors.BadInputError]("bad input", errors.FromError(err))
+	err = errors.NewError[errors.ConflictError]("conflict", errors.FromError(err))
+	err = errors.Errorf("wrapped: %w", err)
+
+	var (
+		badInput errors.BadInputError
+		conflict errors.ConflictError
+		missing  errors.MissingError
+	)
+
+	ok := errors.AsAny(err, &badInput, &conflict, &missing)
+	assert.True(t, ok, "should find at least one match")
+	assert.NotEmpty(t, badInput.Message(), "should find BadInputError")
+	assert.NotEmpty(t, conflict.Message(), "should find ConflictError")
+	assert.Empty(t, missing.Message(), "should not find MissingError")
+}
+
 func withStack() error {
 	return errors.New("first error")
 }

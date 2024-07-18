@@ -1,4 +1,8 @@
-// Package errors is yet another package for errors with stack traces included.
+/*
+Package errors enhances standard library errors with stack traces and includes
+common error types for applications, capable of carrying user-facing messages
+alongside technical details.
+*/
 package errors
 
 import (

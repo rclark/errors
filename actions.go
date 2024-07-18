@@ -34,6 +34,21 @@ func As(err error, target interface{}) bool {
 	return errors.As(err, target)
 }
 
+// AsAny runs [As] for each provided targets. It will return true if it finds a
+// match for at least one of the targets. Otherwise, it will return false. The
+// targets that match will be set to the first error in the tree that matches.
+func AsAny(err error, targets ...interface{}) bool {
+	result := false
+
+	for i := range targets {
+		if As(err, targets[i]) {
+			result = true
+		}
+	}
+
+	return result
+}
+
 // Is reports whether any error in err's tree matches target.
 //
 // The tree consists of err itself, followed by the errors obtained by
@@ -107,6 +122,8 @@ func StackTrace(err error) (Stack, bool) {
 
 type options struct {
 	noOverwrite bool
+	underlying  error
+	skip        int
 }
 
 // StackOption is an option for the WithStack function.

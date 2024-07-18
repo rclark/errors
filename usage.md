@@ -6,26 +6,39 @@
 import "github.com/rclark/errors"
 ```
 
-Package errors is yet another package for errors with stack traces included.
+Package errors enhances standard library errors with stack traces and includes common error types for applications, capable of carrying user\-facing messages alongside technical details.
 
 ## Index
 
 - [func As\(err error, target interface\{\}\) bool](<#As>)
+- [func AsAny\(err error, targets ...interface\{\}\) bool](<#AsAny>)
 - [func Errorf\(format string, args ...any\) error](<#Errorf>)
 - [func Is\(err, target error\) bool](<#Is>)
 - [func Join\(errs ...error\) error](<#Join>)
 - [func New\(message string\) error](<#New>)
+- [func NewError\[T ErrorType\]\(msg string, opts ...UserFacingOption\) error](<#NewError>)
+- [func NewUserFacingError\(msg string, opts ...UserFacingOption\) error](<#NewUserFacingError>)
 - [func Unwrap\(err error\) error](<#Unwrap>)
 - [func UnwrapAny\(err error\) \[\]error](<#UnwrapAny>)
+- [func UserFacingMessage\(err error\) \(string, bool\)](<#UserFacingMessage>)
 - [func WithStack\(err error, opts ...StackOption\) error](<#WithStack>)
+- [type BadInputError](<#BadInputError>)
+  - [func IsBadInput\(err error\) \(BadInputError, bool\)](<#IsBadInput>)
+- [type ConflictError](<#ConflictError>)
+  - [func IsConflict\(err error\) \(ConflictError, bool\)](<#IsConflict>)
 - [type Error](<#Error>)
   - [func \(e Error\) Error\(\) string](<#Error.Error>)
   - [func \(e Error\) Format\(s fmt.State, verb rune\)](<#Error.Format>)
   - [func \(e Error\) StackTrace\(\) Stack](<#Error.StackTrace>)
   - [func \(e Error\) Unwrap\(\) error](<#Error.Unwrap>)
+- [type ErrorType](<#ErrorType>)
 - [type Frame](<#Frame>)
   - [func \(f Frame\) Format\(s fmt.State, verb rune\)](<#Frame.Format>)
   - [func \(f Frame\) String\(\) string](<#Frame.String>)
+- [type MissingError](<#MissingError>)
+  - [func IsMissing\(err error\) \(MissingError, bool\)](<#IsMissing>)
+- [type NotAllowedError](<#NotAllowedError>)
+  - [func IsNotAllowed\(err error\) \(NotAllowedError, bool\)](<#IsNotAllowed>)
 - [type Stack](<#Stack>)
   - [func StackTrace\(err error\) \(Stack, bool\)](<#StackTrace>)
   - [func \(st Stack\) Format\(s fmt.State, verb rune\)](<#Stack.Format>)
@@ -33,6 +46,19 @@ Package errors is yet another package for errors with stack traces included.
 - [type StackOption](<#StackOption>)
   - [func NoOverwrite\(\) StackOption](<#NoOverwrite>)
 - [type StackTracer](<#StackTracer>)
+- [type TimeoutError](<#TimeoutError>)
+  - [func IsTimeout\(err error\) \(TimeoutError, bool\)](<#IsTimeout>)
+- [type UnexpectedError](<#UnexpectedError>)
+  - [func IsUnexpected\(err error\) \(UnexpectedError, bool\)](<#IsUnexpected>)
+- [type UserFacingError](<#UserFacingError>)
+  - [func \(uf UserFacingError\) Error\(\) string](<#UserFacingError.Error>)
+  - [func \(uf UserFacingError\) Message\(\) string](<#UserFacingError.Message>)
+  - [func \(uf UserFacingError\) StackTrace\(\) Stack](<#UserFacingError.StackTrace>)
+  - [func \(uf UserFacingError\) Unwrap\(\) error](<#UserFacingError.Unwrap>)
+- [type UserFacingOption](<#UserFacingOption>)
+  - [func FromError\(err error\) UserFacingOption](<#FromError>)
+  - [func OverwriteStackTrace\(\) UserFacingOption](<#OverwriteStackTrace>)
+  - [func Skip\(i int\) UserFacingOption](<#Skip>)
 
 
 <a name="As"></a>
@@ -52,8 +78,17 @@ An error type might provide an As method so it can be treated as if it were a di
 
 As panics if target is not a non\-nil pointer to either a type that implements error, or to any interface type.
 
+<a name="AsAny"></a>
+## func [AsAny](<https://github.com/rclark/errors/blob/main/actions.go#L40>)
+
+```go
+func AsAny(err error, targets ...interface{}) bool
+```
+
+AsAny runs [As](<#As>) for each provided targets. It will return true if it finds a match for at least one of the targets. Otherwise, it will return false. The targets that match will be set to the first error in the tree that matches.
+
 <a name="Errorf"></a>
-## func [Errorf](<https://github.com/rclark/errors/blob/main/actions.go#L157>)
+## func [Errorf](<https://github.com/rclark/errors/blob/main/actions.go#L174>)
 
 ```go
 func Errorf(format string, args ...any) error
@@ -126,7 +161,7 @@ github.com/rclark/errors_test.ExampleErrorf
 </details>
 
 <a name="Is"></a>
-## func [Is](<https://github.com/rclark/errors/blob/main/actions.go#L55>)
+## func [Is](<https://github.com/rclark/errors/blob/main/actions.go#L70>)
 
 ```go
 func Is(err, target error) bool
@@ -147,7 +182,7 @@ func (m MyError) Is(target error) bool { return target == fs.ErrExist }
 then Is\(MyError\{\}, fs.ErrExist\) returns true. See syscall.Errno.Is for an example in the standard library. An Is method should only shallowly compare err and the target and not call [Unwrap](<#Unwrap>) on either.
 
 <a name="Join"></a>
-## func [Join](<https://github.com/rclark/errors/blob/main/actions.go#L65>)
+## func [Join](<https://github.com/rclark/errors/blob/main/actions.go#L80>)
 
 ```go
 func Join(errs ...error) error
@@ -166,8 +201,68 @@ func New(message string) error
 
 New returns an error with the supplied message and a stack trace to the point where the function was called.
 
+<a name="NewError"></a>
+## func [NewError](<https://github.com/rclark/errors/blob/main/types.go#L126>)
+
+```go
+func NewError[T ErrorType](msg string, opts ...UserFacingOption) error
+```
+
+NewError creates a new error of the provided generic type with the given message intended for a user external to the system.
+
+<details><summary>Example</summary>
+<p>
+
+
+
+```go
+package main
+
+import (
+	"fmt"
+	"log"
+
+	"github.com/rclark/errors"
+)
+
+func main() {
+	underlying := errors.New("failed to decode: string is not valid utf-8")
+	err := errors.NewError[errors.BadInputError]("invalid characters", errors.FromError(underlying))
+
+	bad, ok := errors.IsBadInput(err)
+	if !ok {
+		log.Fatal("expected error to represent bad input")
+	}
+
+	fmt.Println(bad.Message())
+	fmt.Println(bad.Error())
+	fmt.Printf("%s", bad.StackTrace()[0])
+
+}
+```
+
+#### Output
+
+```
+invalid characters
+failed to decode: string is not valid utf-8
+types_test.go:167
+```
+
+</p>
+</details>
+
+<a name="NewUserFacingError"></a>
+## func [NewUserFacingError](<https://github.com/rclark/errors/blob/main/types.go#L52>)
+
+```go
+func NewUserFacingError(msg string, opts ...UserFacingOption) error
+```
+
+NewUserFacingError creates a new [UserFacingError](<#UserFacingError>). The provided message is meant to be shown to a user external to the system. If no error is provided via [FromError](<#FromError>), the provided message will also be used as the underlying error message.
+
 <a name="Unwrap"></a>
-## func [Unwrap](<https://github.com/rclark/errors/blob/main/actions.go#L74>)
+## func [Unwrap](<https://github.com/rclark/errors/blob/main/actions.go#L89>)
 
 ```go
 func Unwrap(err error) error
@@ -178,7 +273,7 @@ Unwrap returns the result of calling the Unwrap method on err, if err's type con
 Unwrap only calls a method of the form "Unwrap\(\) error". In particular Unwrap does not unwrap errors returned by [Join](<#Join>).
 
 <a name="UnwrapAny"></a>
-## func [UnwrapAny](<https://github.com/rclark/errors/blob/main/actions.go#L84>)
+## func [UnwrapAny](<https://github.com/rclark/errors/blob/main/actions.go#L99>)
 
 ```go
 func UnwrapAny(err error) []error
@@ -186,8 +281,17 @@ func UnwrapAny(err error) []error
 
 UnwrapAny returns the result of calling the Unwrap method on err, whether it implements \`Unwrap\(\) \[\]error\` or \`Unwrap\(\) error\`.
 
+<a name="UserFacingMessage"></a>
+## func [UserFacingMessage](<https://github.com/rclark/errors/blob/main/types.go#L107>)
+
+```go
+func UserFacingMessage(err error) (string, bool)
+```
+
+UserFacingMessage returns a message intended for a user external to the system, if the error provides one.
+
 <a name="WithStack"></a>
-## func [WithStack](<https://github.com/rclark/errors/blob/main/actions.go#L126>)
+## func [WithStack](<https://github.com/rclark/errors/blob/main/actions.go#L143>)
 
 ```go
 func WithStack(err error, opts ...StackOption) error
@@ -252,8 +356,48 @@ github.com/rclark/errors_test.withStack
 </p>
 </details>
 
+<a name="BadInputError"></a>
+## type [BadInputError](<https://github.com/rclark/errors/blob/main/types.go#L139-L141>)
+
+BadInputError is an error that represents a situation where some input was invalid.
+
+```go
+type BadInputError struct {
+    UserFacingError
+}
+```
+
+<a name="IsBadInput"></a>
+### func [IsBadInput](<https://github.com/rclark/errors/blob/main/types.go#L145>)
+
+```go
+func IsBadInput(err error) (BadInputError, bool)
+```
+
+IsBadInput reports whether the provided error is a [BadInputError](<#BadInputError>) and returns it if so.
+
+<a name="ConflictError"></a>
+## type [ConflictError](<https://github.com/rclark/errors/blob/main/types.go#L175-L177>)
+
+ConflictError is an error that represents a situation where some action could not be completed due to a conflict.
+
+```go
+type ConflictError struct {
+    UserFacingError
+}
+```
+
+<a name="IsConflict"></a>
+### func [IsConflict](<https://github.com/rclark/errors/blob/main/types.go#L181>)
+
+```go
+func IsConflict(err error) (ConflictError, bool)
+```
+
+IsConflict reports whether the provided error is a [ConflictError](<#ConflictError>) and returns it if so.
+
 <a name="Error"></a>
-## type [Error](<https://github.com/rclark/errors/blob/main/error.go#L10-L14>)
+## type [Error](<https://github.com/rclark/errors/blob/main/error.go#L14-L18>)
 
 Error implements the error interface and provides a stack trace.
 
@@ -264,7 +408,7 @@ type Error struct {
 ```
 
 <a name="Error.Error"></a>
-### func \(Error\) [Error](<https://github.com/rclark/errors/blob/main/error.go#L37>)
+### func \(Error\) [Error](<https://github.com/rclark/errors/blob/main/error.go#L41>)
 
 ```go
 func (e Error) Error() string
@@ -273,7 +417,7 @@ func (e Error) Error() string
 Error returns the error message.
 
 <a name="Error.Format"></a>
-### func \(Error\) [Format](<https://github.com/rclark/errors/blob/main/error.go#L57>)
+### func \(Error\) [Format](<https://github.com/rclark/errors/blob/main/error.go#L61>)
 
 ```go
 func (e Error) Format(s fmt.State, verb rune)
@@ -287,7 +431,7 @@ Format formats the error according to the fmt.Formatter interface.
 - %\+v \<message\>\\n\<package\>.\<function\>\\n\\t\<filepath\>:\<line\>\\n\\t...
 
 <a name="Error.StackTrace"></a>
-### func \(Error\) [StackTrace](<https://github.com/rclark/errors/blob/main/error.go#L42>)
+### func \(Error\) [StackTrace](<https://github.com/rclark/errors/blob/main/error.go#L46>)
 
 ```go
 func (e Error) StackTrace() Stack
@@ -296,13 +440,24 @@ func (e Error) StackTrace() Stack
 StackTrace returns the [Stack](<#Stack>).
 
 <a name="Error.Unwrap"></a>
-### func \(Error\) [Unwrap](<https://github.com/rclark/errors/blob/main/error.go#L47>)
+### func \(Error\) [Unwrap](<https://github.com/rclark/errors/blob/main/error.go#L51>)
 
 ```go
 func (e Error) Unwrap() error
 ```
 
 Unwrap returns the wrapped error, if any.
+
+<a name="ErrorType"></a>
+## type [ErrorType](<https://github.com/rclark/errors/blob/main/types.go#L120-L122>)
+
+ErrorType are generalized categories of errors that can be used to represent different kinds of common application failures. Using categories like this can help to provide more context to callers about how they may wish to handle the error.
+
+```go
+type ErrorType interface {
+    // contains filtered or unexported methods
+}
+```
 
 <a name="Frame"></a>
 ## type [Frame](<https://github.com/rclark/errors/blob/main/frame.go#L12-L20>)
@@ -340,6 +495,46 @@ func (f Frame) String() string
 
 
 
+<a name="MissingError"></a>
+## type [MissingError](<https://github.com/rclark/errors/blob/main/types.go#L163-L165>)
+
+MissingError is an error that represents a situation where something was not found.
+
+```go
+type MissingError struct {
+    UserFacingError
+}
+```
+
+<a name="IsMissing"></a>
+### func [IsMissing](<https://github.com/rclark/errors/blob/main/types.go#L169>)
+
+```go
+func IsMissing(err error) (MissingError, bool)
+```
+
+IsMissing reports whether the provided error is a [MissingError](<#MissingError>) and returns it if so.
+
+<a name="NotAllowedError"></a>
+## type [NotAllowedError](<https://github.com/rclark/errors/blob/main/types.go#L151-L153>)
+
+NotAllowedError is an error that represents a situation where some action was not allowed.
+
+```go
+type NotAllowedError struct {
+    UserFacingError
+}
+```
+
+<a name="IsNotAllowed"></a>
+### func [IsNotAllowed](<https://github.com/rclark/errors/blob/main/types.go#L157>)
+
+```go
+func IsNotAllowed(err error) (NotAllowedError, bool)
+```
+
+IsNotAllowed reports whether the provided error is a [NotAllowedError](<#NotAllowedError>) and returns it if so.
+
 <a name="Stack"></a>
 ## type [Stack](<https://github.com/rclark/errors/blob/main/stack-trace.go#L9>)
 
@@ -350,7 +545,7 @@ type Stack []Frame
 ```
 
 <a name="StackTrace"></a>
-### func [StackTrace](<https://github.com/rclark/errors/blob/main/actions.go#L99>)
+### func [StackTrace](<https://github.com/rclark/errors/blob/main/actions.go#L114>)
 
 ```go
 func StackTrace(err error) (Stack, bool)
@@ -380,7 +575,7 @@ func (st Stack) IsZero() bool
 IsZero reports whether the stack trace is empty.
 
 <a name="StackOption"></a>
-## type [StackOption](<https://github.com/rclark/errors/blob/main/actions.go#L113>)
+## type [StackOption](<https://github.com/rclark/errors/blob/main/actions.go#L130>)
 
 StackOption is an option for the WithStack function.
 
@@ -389,7 +584,7 @@ type StackOption func(*options)
 ```
 
 <a name="NoOverwrite"></a>
-### func [NoOverwrite](<https://github.com/rclark/errors/blob/main/actions.go#L117>)
+### func [NoOverwrite](<https://github.com/rclark/errors/blob/main/actions.go#L134>)
 
 ```go
 func NoOverwrite() StackOption
@@ -447,5 +642,171 @@ github.com/rclark/errors_test.ExampleStackTracer
 
 </p>
 </details>
+
+<a name="TimeoutError"></a>
+## type [TimeoutError](<https://github.com/rclark/errors/blob/main/types.go#L187-L189>)
+
+TimeoutError is an error that represents a situation where some action took too long to complete.
+
+```go
+type TimeoutError struct {
+    UserFacingError
+}
+```
+
+<a name="IsTimeout"></a>
+### func [IsTimeout](<https://github.com/rclark/errors/blob/main/types.go#L193>)
+
+```go
+func IsTimeout(err error) (TimeoutError, bool)
+```
+
+IsTimeout reports whether the provided error is a [TimeoutError](<#TimeoutError>) and returns it if so.
+
+<a name="UnexpectedError"></a>
+## type [UnexpectedError](<https://github.com/rclark/errors/blob/main/types.go#L199-L201>)
+
+UnexpectedError is an error that represents a situation where an unexpected error occurred.
+
+```go
+type UnexpectedError struct {
+    UserFacingError
+}
+```
+
+<a name="IsUnexpected"></a>
+### func [IsUnexpected](<https://github.com/rclark/errors/blob/main/types.go#L205>)
+
+```go
+func IsUnexpected(err error) (UnexpectedError, bool)
+```
+
+IsUnexpected reports whether the provided error is an [UnexpectedError](<#UnexpectedError>) and returns it if so.
+
+<a name="UserFacingError"></a>
+## type [UserFacingError](<https://github.com/rclark/errors/blob/main/types.go#L16-L19>)
+
+UserFacingError is an error that carries a message that has been designated to be shown to a user external to the system.
+
+This is particularly useful in situations where you want an error to carry detailed, technical information to a logging system \(via .Error\(\)\), while also carrying a more user\-friendly description of the failure \(via .Message\(\)\) to another part of the application where it will be returned to the user.
+
+```go
+type UserFacingError struct {
+    // contains filtered or unexported fields
+}
+```
+
+<details><summary>Example</summary>
+<p>
+
+
+
+```go
+package main
+
+import (
+	"fmt"
+	"log"
+
+	"github.com/rclark/errors"
+)
+
+func main() {
+	underlying := errors.New("failed to decode: string is not valid utf-8")
+	err := errors.NewUserFacingError("string included invalid characters", errors.FromError(underlying))
+
+	fmt.Println(err.Error())
+
+	msg, ok := errors.UserFacingMessage(err)
+	if !ok {
+		log.Fatal("expected error to be a UserFacingError")
+	}
+
+	fmt.Println(msg)
+
+}
+```
+
+#### Output
+
+```
+failed to decode: string is not valid utf-8
+string included invalid characters
+```
+
+</p>
+</details>
+
+<a name="UserFacingError.Error"></a>
+### func \(UserFacingError\) [Error](<https://github.com/rclark/errors/blob/main/types.go#L91>)
+
+```go
+func (uf UserFacingError) Error() string
+```
+
+Error returns the underlying error message.
+
+<a name="UserFacingError.Message"></a>
+### func \(UserFacingError\) [Message](<https://github.com/rclark/errors/blob/main/types.go#L97>)
+
+```go
+func (uf UserFacingError) Message() string
+```
+
+Message returns the error message intended for the user external to the system.
+
+<a name="UserFacingError.StackTrace"></a>
+### func \(UserFacingError\) [StackTrace](<https://github.com/rclark/errors/blob/main/types.go#L81>)
+
+```go
+func (uf UserFacingError) StackTrace() Stack
+```
+
+StackTrace returns the [Stack](<#Stack>).
+
+<a name="UserFacingError.Unwrap"></a>
+### func \(UserFacingError\) [Unwrap](<https://github.com/rclark/errors/blob/main/types.go#L86>)
+
+```go
+func (uf UserFacingError) Unwrap() error
+```
+
+Unwrap returns the underlying error, if any.
+
+<a name="UserFacingOption"></a>
+## type [UserFacingOption](<https://github.com/rclark/errors/blob/main/types.go#L22>)
+
+UserFacingOption configures the creation of a [UserFacingError](<#UserFacingError>).
+
+```go
+type UserFacingOption func(*options)
+```
+
+<a name="FromError"></a>
+### func [FromError](<https://github.com/rclark/errors/blob/main/types.go#L25>)
+
+```go
+func FromError(err error) UserFacingOption
+```
+
+FromError sets the [UserFacingError](<#UserFacingError>) to wrap the provided error.
+
+<a name="OverwriteStackTrace"></a>
+### func [OverwriteStackTrace](<https://github.com/rclark/errors/blob/main/types.go#L34>)
+
+```go
+func OverwriteStackTrace() UserFacingOption
+```
+
+OverwriteStackTrace sets the stack trace of a [UserFacingError](<#UserFacingError>) to the place that [NewUserFacingError](<#NewUserFacingError>) was called, overwriting any stack trace that may have been included in an underlying error provided via [FromError](<#FromError>).
+
+<a name="Skip"></a>
+### func [Skip](<https://github.com/rclark/errors/blob/main/types.go#L42>)
+
+```go
+func Skip(i int) UserFacingOption
+```
+
+Skip sets the number of stack frames to skip when creating a [UserFacingError](<#UserFacingError>).
 
 Generated by [gomarkdoc](<https://github.com/princjef/gomarkdoc>)
