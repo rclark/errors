@@ -359,7 +359,7 @@ github.com/rclark/errors_test.withStack
 <a name="BadInputError"></a>
 ## type [BadInputError](<https://github.com/rclark/errors/blob/main/types.go#L139-L141>)
 
-BadInputError is an error that represents a situation where some input was invalid.
+BadInputError is an [ErrorType](<#ErrorType>) that represents a situation where some input was invalid.
 
 ```go
 type BadInputError struct {
@@ -379,7 +379,7 @@ IsBadInput reports whether the provided error is a [BadInputError](<#BadInputErr
 <a name="ConflictError"></a>
 ## type [ConflictError](<https://github.com/rclark/errors/blob/main/types.go#L175-L177>)
 
-ConflictError is an error that represents a situation where some action could not be completed due to a conflict.
+ConflictError is an [ErrorType](<#ErrorType>) that represents a situation where some action could not be completed due to a conflict.
 
 ```go
 type ConflictError struct {
@@ -498,7 +498,7 @@ func (f Frame) String() string
 <a name="MissingError"></a>
 ## type [MissingError](<https://github.com/rclark/errors/blob/main/types.go#L163-L165>)
 
-MissingError is an error that represents a situation where something was not found.
+MissingError is an [ErrorType](<#ErrorType>) that represents a situation where something was not found.
 
 ```go
 type MissingError struct {
@@ -518,7 +518,7 @@ IsMissing reports whether the provided error is a [MissingError](<#MissingError>
 <a name="NotAllowedError"></a>
 ## type [NotAllowedError](<https://github.com/rclark/errors/blob/main/types.go#L151-L153>)
 
-NotAllowedError is an error that represents a situation where some action was not allowed.
+NotAllowedError is an [ErrorType](<#ErrorType>) that represents a situation where some action was not allowed.
 
 ```go
 type NotAllowedError struct {
@@ -646,7 +646,7 @@ github.com/rclark/errors_test.ExampleStackTracer
 <a name="TimeoutError"></a>
 ## type [TimeoutError](<https://github.com/rclark/errors/blob/main/types.go#L187-L189>)
 
-TimeoutError is an error that represents a situation where some action took too long to complete.
+TimeoutError is an [ErrorType](<#ErrorType>) that represents a situation where some action took too long to complete.
 
 ```go
 type TimeoutError struct {
@@ -666,7 +666,7 @@ IsTimeout reports whether the provided error is a [TimeoutError](<#TimeoutError>
 <a name="UnexpectedError"></a>
 ## type [UnexpectedError](<https://github.com/rclark/errors/blob/main/types.go#L199-L201>)
 
-UnexpectedError is an error that represents a situation where an unexpected error occurred.
+UnexpectedError is an [ErrorType](<#ErrorType>) that represents a situation where an unexpected error occurred.
 
 ```go
 type UnexpectedError struct {

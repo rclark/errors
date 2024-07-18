@@ -134,7 +134,7 @@ func asType[T ErrorType](err error) (T, bool) {
 	return e, As(err, &e)
 }
 
-// BadInputError is an error that represents a situation where some input was
+// BadInputError is an [ErrorType] that represents a situation where some input was
 // invalid.
 type BadInputError struct {
 	UserFacingError
@@ -146,7 +146,7 @@ func IsBadInput(err error) (BadInputError, bool) {
 	return asType[BadInputError](err)
 }
 
-// NotAllowedError is an error that represents a situation where some action was
+// NotAllowedError is an [ErrorType] that represents a situation where some action was
 // not allowed.
 type NotAllowedError struct {
 	UserFacingError
@@ -158,7 +158,7 @@ func IsNotAllowed(err error) (NotAllowedError, bool) {
 	return asType[NotAllowedError](err)
 }
 
-// MissingError is an error that represents a situation where something was
+// MissingError is an [ErrorType] that represents a situation where something was
 // not found.
 type MissingError struct {
 	UserFacingError
@@ -170,7 +170,7 @@ func IsMissing(err error) (MissingError, bool) {
 	return asType[MissingError](err)
 }
 
-// ConflictError is an error that represents a situation where some action
+// ConflictError is an [ErrorType] that represents a situation where some action
 // could not be completed due to a conflict.
 type ConflictError struct {
 	UserFacingError
@@ -182,7 +182,7 @@ func IsConflict(err error) (ConflictError, bool) {
 	return asType[ConflictError](err)
 }
 
-// TimeoutError is an error that represents a situation where some action took
+// TimeoutError is an [ErrorType] that represents a situation where some action took
 // too long to complete.
 type TimeoutError struct {
 	UserFacingError
@@ -194,7 +194,7 @@ func IsTimeout(err error) (TimeoutError, bool) {
 	return asType[TimeoutError](err)
 }
 
-// UnexpectedError is an error that represents a situation where an unexpected
+// UnexpectedError is an [ErrorType] that represents a situation where an unexpected
 // error occurred.
 type UnexpectedError struct {
 	UserFacingError
