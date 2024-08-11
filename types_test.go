@@ -197,5 +197,5 @@ func ExampleNewError() {
 	// Output:
 	// invalid characters
 	// failed to decode: string is not valid utf-8
-	// types_test.go:167
+	// types_test.go:185
 }

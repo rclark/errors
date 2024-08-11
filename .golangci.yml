@@ -3,10 +3,6 @@ linters:
   enable:
     - revive
 
-run:
-  build-tags:
-    - wireinject
-
 issues:
   exclude:
     - unexported-return
