@@ -61,9 +61,9 @@ func TestWithStack(t *testing.T) {
 		assert.Contains(t, found, expect, "should contain frame at correct line")
 	})
 
-	t.Run("overwrite existing stack", func(t *testing.T) {
-		err := errors.New("the message")
+	t.Run("do not overwrite existing stack", func(t *testing.T) {
 		line := nextLine()
+		err := errors.New("the message")
 		err = errors.WithStack(err)
 
 		found := fmt.Sprintf("%+s", err)
@@ -71,10 +71,10 @@ func TestWithStack(t *testing.T) {
 		assert.Contains(t, found, expect, "should contain frame at correct line")
 	})
 
-	t.Run("do not overwrite existing stack", func(t *testing.T) {
-		line := nextLine()
+	t.Run("overwrite existing stack", func(t *testing.T) {
 		err := errors.New("the message")
-		err = errors.WithStack(err, errors.NoOverwrite())
+		line := nextLine()
+		err = errors.WithStack(err, errors.Overwrite())
 
 		found := fmt.Sprintf("%+s", err)
 		expect := fmt.Sprintf("the message: [actions_test.go:%d testing.go:", line)
@@ -90,22 +90,23 @@ func ExampleWithStack() {
 	stack, _ := errors.StackTrace(err)
 	fmt.Println(stack[0].Function)
 
-	// When the original error does have a stack trace, it will be overwritten.
+	// When the original error does have a stack trace, it will not be
+	// overwritten.
 	original = withStack()
 	err = errors.WithStack(original)
 	stack, _ = errors.StackTrace(err)
 	fmt.Println(stack[0].Function)
 
-	// With the NoOverwrite option, the original stack trace will be preserved.
+	// With the Overwrite option, the original stack trace will be overwritten.
 	original = withStack()
-	err = errors.WithStack(original, errors.NoOverwrite())
+	err = errors.WithStack(original, errors.Overwrite())
 	stack, _ = errors.StackTrace(err)
 	fmt.Println(stack[0].Function)
 
 	// Output:
 	// github.com/rclark/errors_test.ExampleWithStack
-	// github.com/rclark/errors_test.ExampleWithStack
 	// github.com/rclark/errors_test.withStack
+	// github.com/rclark/errors_test.ExampleWithStack
 }
 
 func TestUnwrapAny(t *testing.T) {
@@ -167,10 +168,10 @@ func TestErrorf(t *testing.T) {
 		assert.Contains(t, found, expect, "should have correct stack trace")
 	})
 
-	t.Run("no overwrite", func(t *testing.T) {
-		line := nextLine()
+	t.Run("overwrite", func(t *testing.T) {
 		err := errors.New("wrapped message")
-		err = errors.Errorf("the message: %w", err, errors.NoOverwrite())
+		line := nextLine()
+		err = errors.Errorf("the message: %w", err, errors.Overwrite())
 
 		found := fmt.Sprintf("%+s", err)
 		expect := fmt.Sprintf("the message: wrapped message: [actions_test.go:%d testing.go:", line)
@@ -206,30 +207,29 @@ func noStack() error {
 }
 
 func ExampleErrorf() {
-	// When wrapped with no options, the stack trace should point to where
-	// errors.Errorf is called from.
+	// When wrapped with no options, the stack trace should not be overwritten,
+	// and point to the withStack function.
 	original := withStack()
 	err := errors.Errorf("wrapper: %w", original)
 	stack, _ := errors.StackTrace(err)
 	fmt.Println(stack[0].Function)
 
-	// When wrapped with the NoOverwrite option, the stack trace should point to
-	// the withStack function.
+	// When wrapped with the Overwrite option, the stack trace should point to
+	// where errors.Errorf is called from.
 	original = withStack()
-	err = errors.Errorf("wrapper: %w", original, errors.NoOverwrite())
+	err = errors.Errorf("wrapper: %w", original, errors.Overwrite())
 	stack, _ = errors.StackTrace(err)
 	fmt.Println(stack[0].Function)
 
-	// When wrapped with the NoOverwrite, but the underlying error has no stack
-	// trace, the resulting stack trace should point to where errors.Errorf is
-	// called from.
+	// When the underlying error has no stack trace, the resulting stack trace
+	// should point to where errors.Errorf is called from.
 	original = noStack()
-	err = errors.Errorf("wrapper: %w", original, errors.NoOverwrite())
+	err = errors.Errorf("wrapper: %w", original)
 	stack, _ = errors.StackTrace(err)
 	fmt.Println(stack[0].Function)
 
 	// Output:
-	// github.com/rclark/errors_test.ExampleErrorf
 	// github.com/rclark/errors_test.withStack
+	// github.com/rclark/errors_test.ExampleErrorf
 	// github.com/rclark/errors_test.ExampleErrorf
 }

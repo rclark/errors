@@ -33,7 +33,7 @@ func FromError(err error) UserFacingOption {
 // been included in an underlying error provided via [FromError].
 func OverwriteStackTrace() UserFacingOption {
 	return func(o *options) {
-		o.noOverwrite = false
+		o.overwrite = true
 	}
 }
 
@@ -52,7 +52,7 @@ func Skip(i int) UserFacingOption {
 func NewUserFacingError(msg string, opts ...UserFacingOption) error {
 	uf := UserFacingError{msg: msg}
 
-	o := options{noOverwrite: true, skip: 3}
+	o := options{overwrite: false, skip: 3}
 	for _, opt := range opts {
 		opt(&o)
 	}
@@ -68,7 +68,7 @@ func NewUserFacingError(msg string, opts ...UserFacingOption) error {
 		return uf
 	}
 
-	if o.noOverwrite {
+	if !o.overwrite {
 		uf.err = te
 		return uf
 	}
