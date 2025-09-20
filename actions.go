@@ -121,32 +121,32 @@ func StackTrace(err error) (Stack, bool) {
 }
 
 type options struct {
-	noOverwrite bool
-	underlying  error
-	skip        int
+	overwrite  bool
+	underlying error
+	skip       int
 }
 
 // StackOption is an option for the WithStack function.
 type StackOption func(*options)
 
-// NoOverwrite is an option that prevents the stack trace from being overridden
-// if the error already has one.
-func NoOverwrite() StackOption {
+// Overwrite is an option that sets the stack trace to the code location where
+// [WithStack] was called, even if the error already had a stack trace.
+func Overwrite() StackOption {
 	return func(o *options) {
-		o.noOverwrite = true
+		o.overwrite = true
 	}
 }
 
 // WithStack adds a [Stack] to the provided error at the point where the
 // function was called. If the error already has a [Stack], it will be
-// overridden unless the [NoOverwrite] option is provided.
+// retained unless the [Overwrite] option is provided.
 func WithStack(err error, opts ...StackOption) error {
 	o := options{}
 	for _, opt := range opts {
 		opt(&o)
 	}
 
-	if o.noOverwrite {
+	if !o.overwrite {
 		var s StackTracer
 		if As(err, &s) {
 			return err
@@ -168,9 +168,8 @@ func WithStack(err error, opts ...StackOption) error {
 // that does not implement the error interface. The %w verb is otherwise a
 // synonym for %v.
 //
-// If used to wrap errors, the [NoOverwrite] option can be provided as the final
-// argument to prevent the first stack trace from from one of the wrapped errors
-// being overridden.
+// If used to wrap errors, the [Overwrite] option can be provided as the final
+// argument to overwrite any stack traces on the wrapped errors.
 func Errorf(format string, args ...any) error {
 	options := options{}
 
@@ -187,7 +186,7 @@ func Errorf(format string, args ...any) error {
 
 	e := fmt.Errorf(format, operands...)
 
-	if options.noOverwrite {
+	if !options.overwrite {
 		var s StackTracer
 		if As(e, &s) {
 			return Error{message: e.Error(), err: e, stack: s.StackTrace()}

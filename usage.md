@@ -44,7 +44,7 @@ Package errors enhances standard library errors with stack traces and includes c
   - [func \(st Stack\) Format\(s fmt.State, verb rune\)](<#Stack.Format>)
   - [func \(st Stack\) IsZero\(\) bool](<#Stack.IsZero>)
 - [type StackOption](<#StackOption>)
-  - [func NoOverwrite\(\) StackOption](<#NoOverwrite>)
+  - [func Overwrite\(\) StackOption](<#Overwrite>)
 - [type StackTracer](<#StackTracer>)
 - [type TimeoutError](<#TimeoutError>)
   - [func IsTimeout\(err error\) \(TimeoutError, bool\)](<#IsTimeout>)
@@ -88,7 +88,7 @@ func AsAny(err error, targets ...interface{}) bool
 AsAny runs [As](<#As>) for each provided targets. It will return true if it finds a match for at least one of the targets. Otherwise, it will return false. The targets that match will be set to the first error in the tree that matches.
 
 <a name="Errorf"></a>
-## func [Errorf](<https://github.com/rclark/errors/blob/main/actions.go#L174>)
+## func [Errorf](<https://github.com/rclark/errors/blob/main/actions.go#L173>)
 
 ```go
 func Errorf(format string, args ...any) error
@@ -98,7 +98,7 @@ Errorf formats according to a format specifier and returns the string as a value
 
 If the format specifier includes a %w verb with an error operand, the returned error will implement an Unwrap method returning the operand. If there is more than one %w verb, the returned error will implement an Unwrap method returning a \[\]error containing all the %w operands in the order they appear in the arguments. It is invalid to supply the %w verb with an operand that does not implement the error interface. The %w verb is otherwise a synonym for %v.
 
-If used to wrap errors, the [NoOverwrite](<#NoOverwrite>) option can be provided as the final argument to prevent the first stack trace from from one of the wrapped errors being overridden.
+If used to wrap errors, the [Overwrite](<#Overwrite>) option can be provided as the final argument to overwrite any stack traces on the wrapped errors.
 
 <details><summary>Example</summary>
 <p>
@@ -124,25 +124,24 @@ func noStack() error {
 }
 
 func main() {
-	// When wrapped with no options, the stack trace should point to where
-	// errors.Errorf is called from.
+	// When wrapped with no options, the stack trace should not be overwritten,
+	// and point to the withStack function.
 	original := withStack()
 	err := errors.Errorf("wrapper: %w", original)
 	stack, _ := errors.StackTrace(err)
 	fmt.Println(stack[0].Function)
 
-	// When wrapped with the NoOverwrite option, the stack trace should point to
-	// the withStack function.
+	// When wrapped with the Overwrite option, the stack trace should point to
+	// where errors.Errorf is called from.
 	original = withStack()
-	err = errors.Errorf("wrapper: %w", original, errors.NoOverwrite())
+	err = errors.Errorf("wrapper: %w", original, errors.Overwrite())
 	stack, _ = errors.StackTrace(err)
 	fmt.Println(stack[0].Function)
 
-	// When wrapped with the NoOverwrite, but the underlying error has no stack
-	// trace, the resulting stack trace should point to where errors.Errorf is
-	// called from.
+	// When the underlying error has no stack trace, the resulting stack trace
+	// should point to where errors.Errorf is called from.
 	original = noStack()
-	err = errors.Errorf("wrapper: %w", original, errors.NoOverwrite())
+	err = errors.Errorf("wrapper: %w", original)
 	stack, _ = errors.StackTrace(err)
 	fmt.Println(stack[0].Function)
 
@@ -152,8 +151,8 @@ func main() {
 #### Output
 
 ```
-github.com/rclark/errors_test.ExampleErrorf
 github.com/rclark/errors_test.withStack
+github.com/rclark/errors_test.ExampleErrorf
 github.com/rclark/errors_test.ExampleErrorf
 ```
 
@@ -246,7 +245,7 @@ func main() {
 ```
 invalid characters
 failed to decode: string is not valid utf-8
-types_test.go:167
+types_test.go:185
 ```
 
 </p>
@@ -297,7 +296,7 @@ UserFacingMessage returns a message intended for a user external to the system, 
 func WithStack(err error, opts ...StackOption) error
 ```
 
-WithStack adds a [Stack](<#Stack>) to the provided error at the point where the function was called. If the error already has a [Stack](<#Stack>), it will be overridden unless the [NoOverwrite](<#NoOverwrite>) option is provided.
+WithStack adds a [Stack](<#Stack>) to the provided error at the point where the function was called. If the error already has a [Stack](<#Stack>), it will be retained unless the [Overwrite](<#Overwrite>) option is provided.
 
 <details><summary>Example</summary>
 <p>
@@ -322,15 +321,16 @@ func main() {
 	stack, _ := errors.StackTrace(err)
 	fmt.Println(stack[0].Function)
 
-	// When the original error does have a stack trace, it will be overwritten.
+	// When the original error does have a stack trace, it will not be
+	// overwritten.
 	original = withStack()
 	err = errors.WithStack(original)
 	stack, _ = errors.StackTrace(err)
 	fmt.Println(stack[0].Function)
 
-	// With the NoOverwrite option, the original stack trace will be preserved.
+	// With the Overwrite option, the original stack trace will be overwritten.
 	original = withStack()
-	err = errors.WithStack(original, errors.NoOverwrite())
+	err = errors.WithStack(original, errors.Overwrite())
 	stack, _ = errors.StackTrace(err)
 	fmt.Println(stack[0].Function)
 
@@ -349,8 +349,8 @@ func noStack() error {
 
 ```
 github.com/rclark/errors_test.ExampleWithStack
-github.com/rclark/errors_test.ExampleWithStack
 github.com/rclark/errors_test.withStack
+github.com/rclark/errors_test.ExampleWithStack
 ```
 
 </p>
@@ -583,14 +583,14 @@ StackOption is an option for the WithStack function.
 type StackOption func(*options)
 ```
 
-<a name="NoOverwrite"></a>
-### func [NoOverwrite](<https://github.com/rclark/errors/blob/main/actions.go#L134>)
+<a name="Overwrite"></a>
+### func [Overwrite](<https://github.com/rclark/errors/blob/main/actions.go#L134>)
 
 ```go
-func NoOverwrite() StackOption
+func Overwrite() StackOption
 ```
 
-NoOverwrite is an option that prevents the stack trace from being overridden if the error already has one.
+Overwrite is an option that sets the stack trace to the code location where [WithStack](<#WithStack>) was called, even if the error already had a stack trace.
 
 <a name="StackTracer"></a>
 ## type [StackTracer](<https://github.com/rclark/errors/blob/main/stack-trace.go#L45-L47>)
